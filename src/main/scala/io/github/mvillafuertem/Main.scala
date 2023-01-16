@@ -4,7 +4,8 @@ import cats.effect.{ ExitCode, IO, IOApp }
 import io.github.mvillafuertem.user.User
 import neotypes.GraphDatabase
 import neotypes.cats.effect.implicits._
-import neotypes.generic.DerivedResultMapper.deriveResultMapper
+// import neotypes.generic.DerivedResultMapper.deriveResultMapper
+import neotypes.generic.auto._
 import neotypes.implicits.all._
 import org.neo4j.driver.AuthTokens
 
