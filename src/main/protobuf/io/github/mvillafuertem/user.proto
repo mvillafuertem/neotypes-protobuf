@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package io.github.mvillafuertem;
+
+message User {
+
+  string name = 10;
+
+  string surname = 20;
+
+}
