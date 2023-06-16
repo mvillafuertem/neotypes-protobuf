@@ -4,8 +4,10 @@ package io.github.mvillafuertem;
 
 message User {
 
-  string name = 10;
+  optional string name = 10;
 
-  string surname = 20;
+  optional string surname = 20;
+
+  optional string username = 30;
 
 }
