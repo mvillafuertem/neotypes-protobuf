@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package io.github.mvillafuertem;
+
+message Relationship {}
+
+enum RelationshipType {
+
+  IsAdmin = 0;
+
+}

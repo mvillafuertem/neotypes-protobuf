@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    serviceName: neo4j
+  name: neo4j
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      serviceName: neo4j
+  template:
+    metadata:
+      labels:
+        serviceName: neo4j
+    spec:
+      initContainers:
+        - name: neo4j-apoc
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - cp plugins/* /opt && ls -la /opt
+          image: my-neo4j-apoc:4.4.6
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: shared-plugins
+              mountPath: /opt
+      containers:
+        - name: neo4j
+          image: neo4j:4.4.6
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NEO4J_AUTH
+              value: neo4j/accounttest
+            - name: NEO4J_dbms_jvm_additional
+              value: -XX:+ExitOnOutOfMemoryError -XshowSettings:vm
+            - name: NEO4J_dbms_directories_import
+              value: "/"
+          ports:
+            - containerPort: 7687
+              protocol: TCP
+          resources: { }
+          securityContext:
+            runAsUser: 1000
+          volumeMounts:
+            - mountPath: /plugins
+              name: shared-plugins
+            - mountPath: /var/lib/neo4j/db-init/mortality-data.cypher
+              subPath: mortality-data.cypher
+              name: db-init-volume
+            - mountPath: /var/lib/neo4j/conf/apoc.conf
+              subPath: apoc.conf
+              name: apoc-configuration-volume
+      volumes:
+        - name: shared-plugins
+          emptyDir: {}
+        - configMap:
+            defaultMode: 422
+            name: neo4j
+          name: db-init-volume
+        - configMap:
+            defaultMode: 422
+            name: neo4j
+          name: apoc-configuration-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    serviceName: neo4j
+  name: neo4j
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    serviceName: neo4j
+  sessionAffinity: None
+  ports:
+    - name: bolt
+      nodePort: 30872
+      port: 7687
+      protocol: TCP
+      targetPort: 7687
+    - name: http
+      nodePort: 31958
+      port: 7474
+      protocol: TCP
+      targetPort: 7474
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: default
+  name: neo4j
+  labels:
+    serviceName: neo4j
+data:
+  apoc.conf: |
+    apoc.import.file.use_neo4j_config=true
+    apoc.import.file.enabled=true
+    apoc.initializer.neo4j.1=CALL apoc.cypher.runFile("file:////var/lib/neo4j/db-init/mortality-data.cypher")
+  mortality-data.cypher: |
+    CREATE(user:`User` {name: 'Manolo', surname: 'Del Bombo', usename: 'monolo-bombo'})
+    CREATE(admin:`Admin` {admin: true})
+    CREATE(user)-[:IsAdmin]->(admin);
