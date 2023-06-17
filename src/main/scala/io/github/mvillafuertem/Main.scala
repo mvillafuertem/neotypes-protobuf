@@ -1,10 +1,11 @@
 package io.github.mvillafuertem
 
-import cats.effect.{ ExitCode, IO, IOApp }
+import cats.effect.{ExitCode, IO, IOApp}
 import neotypes.GraphDatabase
 import neotypes.cats.effect.implicits._
-import neotypes.generic.implicits._
+import neotypes.generic.implicits.deriveSealedTraitCoproductInstances
 import neotypes.mappers.ResultMapper
+import neotypes.mappers.ResultMapper.CoproductDiscriminatorStrategy
 import neotypes.syntax.all._
 import org.neo4j.driver.AuthTokens
 import scalapb.UnknownFieldSet
@@ -26,8 +27,21 @@ object Main extends IOApp {
         AuthTokens.basic("neo4j", "accounttest")
       )
       .use { driver =>
+        val options: Seq[(String, ResultMapper[_ <: SimpleADT])] = deriveSealedTraitCoproductInstances[SimpleADT].options
+        println(options)
+        println(options)
+        println(options)
+        println(options)
+        println(options)
         """MATCH (user:User {name: "Manolo"}) RETURN user, null LIMIT 1"""
-          .query(ResultMapper.coproductDerive[SimpleADT])
+          .query(ResultMapper.coproduct(
+            strategy = {
+              println("asdfadsf")
+              CoproductDiscriminatorStrategy.NodeLabel
+            }
+          )(
+            options:_*
+          ))
           //.query(ResultMapper.list(SimpleADT.generatedMessage))
           .single(driver)
           .map { user =>

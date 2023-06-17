@@ -1,0 +1,32 @@
+name: scalaci
+
+on: [ push, pull_request ]
+
+jobs:
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java-version: [ 11.0.17, 15.0.2 ] # 17.0.5 spark Tests unsuccessful
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache SBT
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.ivy2/local
+            ~/.sbt
+            ~/.m2/repository
+          key: ${{ runner.os }}-job-test-${{ matrix.java-version }}-sbt-${{ hashFiles('**/build.sbt') }}
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ matrix.java-version }} # The JDK version to make available on the path.
+          distribution: adopt
+          architecture: x64 # (x64 or x86) - defaults to x64
+          cache: 'sbt'
+      - name: Run Tests
+        run: sbt clean test
