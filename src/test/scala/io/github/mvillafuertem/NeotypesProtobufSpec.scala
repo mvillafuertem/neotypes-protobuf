@@ -4,7 +4,7 @@ import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.syntax.option._
 import io.github.mvillafuertem.NeotypesProtobufSpec.testResource
-import io.github.mvillafuertem.SimpleADT.NodeRelationshipNode
+import io.github.mvillafuertem.SimpleADT.{NodeRelationshipNode, SingleNode}
 import io.github.mvillafuertem.admin.Admin
 import io.github.mvillafuertem.relationship.Relationship
 import io.github.mvillafuertem.user.User
@@ -15,7 +15,7 @@ import neotypes.syntax.all._
 import org.apache.commons.io.FileUtils
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.connectors.BoltConnector
-import org.neo4j.dbms.api.{ DatabaseManagementService, DatabaseManagementServiceBuilder }
+import org.neo4j.dbms.api.{DatabaseManagementService, DatabaseManagementServiceBuilder}
 import org.neo4j.graphdb.GraphDatabaseService
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
@@ -67,8 +67,18 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
 
     }
 
-    "return a coproduct of `SimpleADT`" ignore {
-      import neotypes.generic.implicits.deriveSealedTraitCoproductInstances
+    "return SingleNode which is a coproduct of `SimpleADT`" in {
+
+      val query = """MATCH (user:User) RETURN user LIMIT 1""".stripMargin
+
+      val actual: SimpleADT =
+        NeotypesProtobufSpec.execute(query, SimpleADT.NodeRelationshipNode.nodeRelationshipNodeResultMapper.or(SimpleADT.SingleNode.singleNodeResultMapper))
+
+      actual shouldBe SingleNode(User.of(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some))
+
+    }
+
+    "return NodeRelationshipNode which is a coproduct of `SimpleADT`" in {
 
       val query =
         """
@@ -77,7 +87,8 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
           |LIMIT 1
           |""".stripMargin
 
-      val actual: SimpleADT = NeotypesProtobufSpec.execute(query, ResultMapper.coproductDerive[SimpleADT](deriveSealedTraitCoproductInstances))
+      val actual: SimpleADT =
+        NeotypesProtobufSpec.execute(query, SimpleADT.NodeRelationshipNode.nodeRelationshipNodeResultMapper.or(SimpleADT.SingleNode.singleNodeResultMapper))
 
       actual shouldBe NodeRelationshipNode(
         User.of(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some),

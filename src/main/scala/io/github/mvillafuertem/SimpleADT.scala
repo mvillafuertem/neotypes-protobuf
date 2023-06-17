@@ -7,7 +7,6 @@ import io.github.mvillafuertem.relationship.{ Relationship, RelationshipType }
 import io.github.mvillafuertem.user.User
 import neotypes.mappers.ResultMapper
 import neotypes.model.types
-import neotypes.model.types.{ NeoList, NeoType }
 import scalapb.GeneratedMessage
 import scalapb_circe.JsonFormat
 
@@ -26,42 +25,28 @@ object SimpleADT {
       case _                                            => Json.fromString(value.toString)
     }
 
-  implicit val nothing: ResultMapper[Unit] = ResultMapper.fromMatch { case _ =>
-    ()
-  }
-
   @scala.annotation.unused
   implicit val generatedMessage: ResultMapper[GeneratedMessage] = ResultMapper.fromMatch {
-    case value: types.Node if value.hasLabel("user") =>
-      println("user")
+    case value: types.Node if value.hasLabel(User.messageCompanion.scalaDescriptor.name) =>
       val json: Json = value.properties.view.mapValues(map).toMap.asJson
-      val user: User = JsonFormat.fromJson[User](json)
-      println(user)
-      user
+      JsonFormat.fromJson[User](json)
 
-    case value: types.Node if value.hasLabel("admin") =>
-      println("admin")
+    case value: types.Node if value.hasLabel(Admin.messageCompanion.scalaDescriptor.name) =>
       val json: Json = value.properties.view.mapValues(map).toMap.asJson
-      val admin      = JsonFormat.fromJson[Admin](json)
-      println(admin)
-      admin
+      JsonFormat.fromJson[Admin](json)
 
-    case types.Relationship(_, relationshipType, properties, _, _) if relationshipType.equalsIgnoreCase(RelationshipType.IsAdmin.name.toLowerCase) =>
-      println("admin")
-      println(properties)
+    case types.Relationship(_, relationshipType, _, _, _) if relationshipType.equalsIgnoreCase(RelationshipType.IsAdmin.name.toLowerCase) =>
       Relationship()
 
     case types.Value.NullValue =>
-      println("null")
-      com.google.protobuf.empty.Empty()
-
+      com.google.protobuf.struct.Value()
   }
 
   final case class SingleNode(node: GeneratedMessage) extends SimpleADT
 
   object SingleNode {
 
-    implicit val singleNodeResultMapper: ResultMapper[SingleNode] = ResultMapper.fromMatch { case value =>
+    implicit val singleNodeResultMapper: ResultMapper[SimpleADT] = ResultMapper.fromMatch { case value =>
       generatedMessage.decode(value).map(SingleNode(_))
     }
   }
@@ -69,8 +54,12 @@ object SimpleADT {
   final case class NodeRelationshipNode(startNode: GeneratedMessage, relationship: GeneratedMessage, endNode: GeneratedMessage) extends SimpleADT
 
   object NodeRelationshipNode {
-    implicit val nodeRelationshipNodeResultMapper: ResultMapper[NodeRelationshipNode] =
-      ResultMapper.fromFunction(NodeRelationshipNode.apply _)(generatedMessage, generatedMessage, generatedMessage)
+    implicit val nodeRelationshipNodeResultMapper: ResultMapper[SimpleADT] =
+      ResultMapper.fromFunction[SimpleADT, GeneratedMessage, GeneratedMessage, GeneratedMessage](NodeRelationshipNode.apply)(
+        generatedMessage,
+        generatedMessage,
+        generatedMessage
+      )
 
   }
 }
