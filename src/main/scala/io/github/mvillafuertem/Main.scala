@@ -1,7 +1,6 @@
 package io.github.mvillafuertem
 
 import cats.effect.{ ExitCode, IO, IOApp }
-import cats.syntax.option.none
 import neotypes.GraphDatabase
 import neotypes.cats.effect.implicits._
 import neotypes.generic.implicits._
@@ -27,21 +26,37 @@ object Main extends IOApp {
         AuthTokens.basic("neo4j", "accounttest")
       )
       .use { driver =>
-        """MATCH (user:User {name: "Manolo"}) RETURN user, "null" LIMIT 1"""
+        """MATCH (user:User {name: "Manolo"}) RETURN user, null LIMIT 1"""
           .query(ResultMapper.coproductDerive[SimpleADT])
+          //.query(ResultMapper.list(SimpleADT.generatedMessage))
           .single(driver)
           .map { user =>
-            println(user); user
+            println("useruseruseruseruseruseruser");
+            println(user)
+            user
           }
-          .handleError(e => System.err.println(none)) *>
-          """MATCH (user:User {name: "Manolo"})-[r:IsAdmin]-(admin:Admin) RETURN user, r, admin LIMIT 1"""
-            .query(ResultMapper.coproductDerive[SimpleADT])
-            // .query(nodeRelationshipNodeResultMapper)
-            .single(driver)
-            .map { user =>
-              println(user); user
-            }
-            .handleError(e => System.err.println(none))
+          .handleError(e => System.err.println(e)) // *>
+//          """MATCH (user:User {name: "Manolo"})-[r:IsAdmin]-(admin:Admin) RETURN user, r, admin LIMIT 1"""
+//            .query(ResultMapper.list(SimpleADT.generatedMessage))
+//            // .query(nodeRelationshipNodeResultMapper)
+//            .single(driver)
+//            .map { user =>
+//              user match {
+//                case a :: Nil           =>
+//                  println("a :: Nil")
+//                case a :: b :: Nil      =>
+//                  println("a :: b")
+//                case a :: b :: c :: Nil =>
+//                  println("a :: b :: c")
+//                  println(a.companion.scalaDescriptor.name)
+//                  println(b.companion.scalaDescriptor.name)
+//                  println(c.companion.scalaDescriptor.name)
+//                  println(b)
+//                  println(c)
+//              }
+//              println(user); user
+//            }
+//            .handleError(e => System.err.println(e))
       }
       .as(ExitCode.Success)
   }

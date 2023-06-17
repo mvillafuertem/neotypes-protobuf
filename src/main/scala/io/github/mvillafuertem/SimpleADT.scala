@@ -3,13 +3,16 @@ package io.github.mvillafuertem
 import io.circe.Json
 import io.circe.syntax._
 import io.github.mvillafuertem.admin.Admin
-import io.github.mvillafuertem.relationship.{ Relationship, RelationshipType }
+import io.github.mvillafuertem.relationship.{Relationship, RelationshipType}
 import io.github.mvillafuertem.user.User
 import neotypes.mappers.ResultMapper
-import neotypes.mappers.ResultMapper.string
+import neotypes.mappers.ResultMapper.{string, values}
 import neotypes.model.types
+import neotypes.model.types.NeoList
 import scalapb.GeneratedMessage
 import scalapb_circe.JsonFormat
+
+import scala.runtime.Nothing$
 
 sealed trait SimpleADT extends Product with Serializable
 
@@ -25,6 +28,11 @@ object SimpleADT {
       case neotypes.model.types.NeoMap(values)          => Json.fromFields(values.view.mapValues(map))
       case _                                            => Json.fromString(value.toString)
     }
+
+  implicit val nothing: ResultMapper[Unit] = ResultMapper.fromMatch{
+    case _ =>
+      ()
+  }
 
   @scala.annotation.unused
   implicit val generatedMessage: ResultMapper[GeneratedMessage] = ResultMapper.fromMatch {
@@ -47,14 +55,24 @@ object SimpleADT {
       println(properties)
       Relationship()
 
+    case types.Value.NullValue =>
+      println("null")
+      com.google.protobuf.empty.Empty()
+
+    case _ =>
+      println("value")
+      println()
+      com.google.protobuf.empty.Empty()
+
+
   }
 
-  final case class SingleNode(node: GeneratedMessage, `null`: String) extends SimpleADT
+  final case class SingleNode(node: GeneratedMessage, `null`: Option[Unit]) extends SimpleADT
 
   object SingleNode {
 
     implicit val singleNodeResultMapper: ResultMapper[SingleNode] =
-      ResultMapper.fromFunction(SingleNode.apply _)(generatedMessage, string)
+      ResultMapper.fromFunction(SingleNode.apply _)(generatedMessage, ResultMapper.option)
   }
 
   final case class NodeRelationshipNode(startNode: GeneratedMessage, relationship: GeneratedMessage, endNode: GeneratedMessage) extends SimpleADT
