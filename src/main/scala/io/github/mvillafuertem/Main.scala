@@ -14,13 +14,6 @@ object Main extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = {
 
-    @scala.annotation.unused
-    implicit val valueMapper: ResultMapper[UnknownFieldSet] = ResultMapper.fromMatch { case _ =>
-      // only for test
-      println("UnknownFieldSet")
-      UnknownFieldSet.empty
-    }
-
     GraphDatabase
       .asyncDriver[IO](
         "neo4j://localhost:30872",

@@ -4,29 +4,46 @@ import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.syntax.option._
 import io.github.mvillafuertem.NeotypesProtobufSpec.testResource
-import io.github.mvillafuertem.SimpleADT.{NodeRelationshipNode, SingleNode}
+import io.github.mvillafuertem.SimpleADT.{ NodeRelationshipNode, SingleNode }
 import io.github.mvillafuertem.admin.Admin
 import io.github.mvillafuertem.relationship.Relationship
 import io.github.mvillafuertem.user.User
 import neotypes.GraphDatabase
 import neotypes.cats.effect.implicits._
+import neotypes.generic.implicits.deriveCaseClassProductMap
 import neotypes.mappers.ResultMapper
+import neotypes.model.types.Value
 import neotypes.syntax.all._
 import org.apache.commons.io.FileUtils
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.connectors.BoltConnector
-import org.neo4j.dbms.api.{DatabaseManagementService, DatabaseManagementServiceBuilder}
+import org.neo4j.dbms.api.{ DatabaseManagementService, DatabaseManagementServiceBuilder }
 import org.neo4j.graphdb.GraphDatabaseService
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import scalapb.GeneratedMessage
+import scalapb.{ GeneratedMessage, UnknownFieldSet }
 
 import java.nio.file.Path
 
 final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
 
+
+  implicit val unknownFieldSetMapper: ResultMapper[UnknownFieldSet] = ResultMapper.fromMatch { _ =>
+    UnknownFieldSet.empty
+  }
+
   "NeotypesProtobuf" should {
+
+    "WIP" in {
+
+      val query = """MATCH (user:User { name: "Manolo" }) RETURN user LIMIT 1"""
+
+      val actual: GeneratedMessage = NeotypesProtobufSpec.execute(query, ResultMapper.productDerive[User](deriveCaseClassProductMap))
+
+      actual shouldBe User.of(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some)
+
+    }
 
     "return an `User` node" in {
 

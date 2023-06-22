@@ -7,8 +7,7 @@ import io.github.mvillafuertem.relationship.{ Relationship, RelationshipType }
 import io.github.mvillafuertem.user.User
 import neotypes.mappers.ResultMapper
 import neotypes.model.types
-import scalapb.GeneratedMessage
-import scalapb_circe.JsonFormat
+import scalapb.{ GeneratedMessage, UnknownFieldSet }
 
 sealed trait SimpleADT extends Product with Serializable
 
@@ -25,21 +24,19 @@ object SimpleADT {
       case _                                            => Json.fromString(value.toString)
     }
 
+  implicit val valueMapper: ResultMapper[UnknownFieldSet] = ResultMapper.fromMatch { _ =>
+    UnknownFieldSet.empty
+  }
+
   @scala.annotation.unused
   implicit val generatedMessage: ResultMapper[GeneratedMessage] = ResultMapper.fromMatch {
-    case value: types.Node if value.hasLabel(User.messageCompanion.scalaDescriptor.name) =>
-      val json: Json = value.properties.view.mapValues(map).toMap.asJson
-      JsonFormat.fromJson[User](json)
-
+    case value: types.Node if value.hasLabel(User.messageCompanion.scalaDescriptor.name)  =>
+      ResultMapper.fromFunction(User.apply _).decode(value)
     case value: types.Node if value.hasLabel(Admin.messageCompanion.scalaDescriptor.name) =>
-      val json: Json = value.properties.view.mapValues(map).toMap.asJson
-      JsonFormat.fromJson[Admin](json)
+      ResultMapper.fromFunction(Admin.apply _).decode(value)
 
     case types.Relationship(_, relationshipType, _, _, _) if relationshipType.equalsIgnoreCase(RelationshipType.IsAdmin.name.toLowerCase) =>
-      Relationship()
-
-    case types.Value.NullValue =>
-      com.google.protobuf.struct.Value()
+      Right(Relationship())
   }
 
   final case class SingleNode(node: GeneratedMessage) extends SimpleADT
