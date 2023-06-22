@@ -33,18 +33,13 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
     UnknownFieldSet.empty
   }
 
-  implicit val value1: ResultMapper[Seq[Info]] = ResultMapper
-    .list(
-      ResultMapper.fromMatch {
-        case Value.Str(value) => Info.of(value, value.some)
-        case NullValue        => Info.defaultInstance
-      }
-    )
-    .or(
-      ResultMapper.fromMatch { case NullValue =>
-        Seq.empty[Info]
-      }
-    )
+  private val infoMapper: ResultMapper[Info]          = ResultMapper.fromMatch {
+    case Value.Str(value) => Info.of(value, value.some)
+    case NullValue        => Info.defaultInstance
+  }
+  implicit val seqInfoMapper: ResultMapper[Seq[Info]] = ResultMapper
+    .list(infoMapper)
+    .or(ResultMapper.fromMatch { case NullValue => Seq.empty[Info] })
 
   "NeotypesProtobuf" should {
 
