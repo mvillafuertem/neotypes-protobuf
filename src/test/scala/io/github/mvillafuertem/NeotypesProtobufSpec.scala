@@ -7,12 +7,13 @@ import io.github.mvillafuertem.NeotypesProtobufSpec.testResource
 import io.github.mvillafuertem.SimpleADT.{ NodeRelationshipNode, SingleNode }
 import io.github.mvillafuertem.admin.Admin
 import io.github.mvillafuertem.relationship.Relationship
-import io.github.mvillafuertem.user.User
+import io.github.mvillafuertem.user.{ Info, User }
 import neotypes.GraphDatabase
 import neotypes.cats.effect.implicits._
 import neotypes.generic.implicits.deriveCaseClassProductMap
 import neotypes.mappers.ResultMapper
 import neotypes.model.types.Value
+import neotypes.model.types.Value.NullValue
 import neotypes.syntax.all._
 import org.apache.commons.io.FileUtils
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -28,10 +29,22 @@ import java.nio.file.Path
 
 final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
 
-
-  implicit val unknownFieldSetMapper: ResultMapper[UnknownFieldSet] = ResultMapper.fromMatch { _ =>
+  implicit val unknownFieldSetMapper: ResultMapper[UnknownFieldSet] = ResultMapper.fromMatch { case NullValue =>
     UnknownFieldSet.empty
   }
+
+  implicit val value1: ResultMapper[Seq[Info]] = ResultMapper
+    .list(
+      ResultMapper.fromMatch {
+        case Value.Str(value) => Info.of(value, value.some)
+        case NullValue        => Info.defaultInstance
+      }
+    )
+    .or(
+      ResultMapper.fromMatch { case NullValue =>
+        Seq.empty[Info]
+      }
+    )
 
   "NeotypesProtobuf" should {
 
@@ -41,7 +54,7 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
 
       val actual: GeneratedMessage = NeotypesProtobufSpec.execute(query, ResultMapper.productDerive[User](deriveCaseClassProductMap))
 
-      actual shouldBe User.of(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some)
+      actual shouldBe User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some)
 
     }
 
@@ -51,7 +64,7 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
 
       val actual: GeneratedMessage = NeotypesProtobufSpec.execute(query, SimpleADT.generatedMessage)
 
-      actual shouldBe User.of(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some)
+      actual shouldBe User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some)
 
     }
 
@@ -77,7 +90,7 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
       val actual: Seq[GeneratedMessage] = NeotypesProtobufSpec.execute(query, ResultMapper.list(SimpleADT.generatedMessage))
 
       actual shouldBe Seq(
-        User.of(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some),
+        User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some),
         Relationship.of(),
         Admin.of(admin = true.some)
       )
@@ -91,7 +104,7 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
       val actual: SimpleADT =
         NeotypesProtobufSpec.execute(query, SimpleADT.NodeRelationshipNode.nodeRelationshipNodeResultMapper.or(SimpleADT.SingleNode.singleNodeResultMapper))
 
-      actual shouldBe SingleNode(User.of(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some))
+      actual shouldBe SingleNode(User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some))
 
     }
 
@@ -108,7 +121,7 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
         NeotypesProtobufSpec.execute(query, SimpleADT.NodeRelationshipNode.nodeRelationshipNodeResultMapper.or(SimpleADT.SingleNode.singleNodeResultMapper))
 
       actual shouldBe NodeRelationshipNode(
-        User.of(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some),
+        User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some),
         Relationship.of(),
         Admin.of(admin = true.some)
       )
@@ -122,7 +135,7 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
       .database(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
 
     graphDatabaseService
-      .executeTransactionally("""|CREATE(user:`User` {name: 'Manolo', surname: 'Del Bombo', username: 'monolo-bombo'})
+      .executeTransactionally("""|CREATE(user:`User` {name: 'Manolo', surname: 'Del Bombo', username: 'monolo-bombo', info: 'more information'})
                                  |CREATE(admin:`Admin` {admin: true})
                                  |CREATE(user)-[:IsAdmin]->(admin);
                                  |""".stripMargin)

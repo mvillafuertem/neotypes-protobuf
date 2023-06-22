@@ -3,11 +3,12 @@ package io.github.mvillafuertem
 import io.circe.Json
 import io.circe.syntax._
 import io.github.mvillafuertem.admin.Admin
-import io.github.mvillafuertem.relationship.{ Relationship, RelationshipType }
-import io.github.mvillafuertem.user.User
+import io.github.mvillafuertem.relationship.{Relationship, RelationshipType}
+import io.github.mvillafuertem.user.{Info, User}
 import neotypes.mappers.ResultMapper
 import neotypes.model.types
-import scalapb.{ GeneratedMessage, UnknownFieldSet }
+import neotypes.model.types.Value.NullValue
+import scalapb.{GeneratedMessage, UnknownFieldSet}
 
 sealed trait SimpleADT extends Product with Serializable
 
@@ -27,6 +28,13 @@ object SimpleADT {
   implicit val valueMapper: ResultMapper[UnknownFieldSet] = ResultMapper.fromMatch { _ =>
     UnknownFieldSet.empty
   }
+
+  implicit val listMapper: ResultMapper[Seq[Info]] = ResultMapper.fromMatch { case NullValue =>
+    Seq.empty[Info]
+    // collectAs(Seq, )
+  }
+
+
 
   @scala.annotation.unused
   implicit val generatedMessage: ResultMapper[GeneratedMessage] = ResultMapper.fromMatch {

@@ -10,4 +10,14 @@ message User {
 
   optional string username = 30;
 
+  repeated Info info = 230;
+
+}
+
+message Info {
+
+  string field = 10;
+
+  optional string source = 20;
+
 }
