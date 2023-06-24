@@ -16,8 +16,12 @@ lazy val root = (project in file("."))
       "io.github.scalapb-json" %% "scalapb-circe"        % "0.12.2"
     ) ++ Seq(
       "org.scalatest"          %% "scalatest"            % "3.2.15" % Test
+    ) ++ Seq(
+      "org.scala-lang" % "scala-reflect"  % scalaVersion.value,
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
     ),
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
-    )
+    ),
+    //scalacOptions += "-Ymacro-debug-lite"
   )

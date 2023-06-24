@@ -10,10 +10,10 @@ import io.github.mvillafuertem.relationship.Relationship
 import io.github.mvillafuertem.user.{ Info, User }
 import neotypes.GraphDatabase
 import neotypes.cats.effect.implicits._
-import neotypes.generic.implicits.deriveCaseClassProductMap
+import neotypes.generic.implicits._
 import neotypes.mappers.ResultMapper
-import neotypes.model.types.Value
 import neotypes.model.types.Value.NullValue
+import neotypes.model.types.{ NeoList, NeoObject, Value }
 import neotypes.syntax.all._
 import org.apache.commons.io.FileUtils
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -33,13 +33,14 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
     UnknownFieldSet.empty
   }
 
-  private val infoMapper: ResultMapper[Info]          = ResultMapper.fromMatch {
-    case Value.Str(value) => Info.of(value, value.some)
-    case NullValue        => Info.defaultInstance
+  private implicit val infoasdMapper: ResultMapper[Seq[Info]] = ResultMapper.fromMatch {
+    case Value.Str(value) =>
+      println(value)
+      println(value)
+      println(value)
+      println(value)
+      Seq(Info.of(value, value.some))
   }
-  implicit val seqInfoMapper: ResultMapper[Seq[Info]] = ResultMapper
-    .list(infoMapper)
-    .or(ResultMapper.fromMatch { case NullValue => Seq.empty[Info] })
 
   "NeotypesProtobuf" should {
 
