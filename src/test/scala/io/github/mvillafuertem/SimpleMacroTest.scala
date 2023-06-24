@@ -10,21 +10,29 @@ final class SimpleMacroTest extends AnyWordSpecLike with Matchers with BeforeAnd
 
     "WIP" in {
 
-      val str = SimpleMacro.defOddEvenMacro(9)
-      println(str)
-      println(str)
-      println(str)
+//      val str = SimpleMacro.defOddEvenMacro(9)
+//      println(str)
+//      println(str)
+//      println(str)
 
-      val data: SimpleMacro.RemoteData = SimpleMacro.RemoteData(
+      val mydata: SimpleMacro.RemoteData = SimpleMacro.RemoteData(
         symbol = "APPLE",
         strikePrice = 9,
         underlyingPrice = 9
       )
-      val result = SimpleMacro.query(data.underlyingPrice)
+      val result = SimpleMacro.query(mydata.underlyingPrice)
       println(result)
-      println(result)
-      println(result)
-      println(result)
+      val result2: SimpleMacro.Ast = SimpleMacro.query(mydata.underlyingPrice - mydata.strikePrice)
+      println("result2result2result2")
+      println(result2)
+      println(result2)
+      println(result2)
+
+      val number = Macros.nonZeroNum(8)
+      println(number)
+      println(number)
+      println(number)
+      println(number)
 
     }
   }
