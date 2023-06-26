@@ -3,6 +3,8 @@ package io.github.mvillafuertem
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
+// https://www.youtube.com/watch?v=PrZ9tetyuzo
+// https://www.youtube.com/watch?v=FTw216GqK30
 // https://www.youtube.com/watch?v=8ryhJOE1m30
 // https://www.youtube.com/watch?v=8scL8dzRqjA
 // https://docs.scala-lang.org/overviews/reflection/symbols-trees-types.html
