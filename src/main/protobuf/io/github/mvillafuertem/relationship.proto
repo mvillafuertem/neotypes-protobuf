@@ -8,4 +8,6 @@ enum RelationshipType {
 
   IsAdmin = 0;
 
+  HasPermission = 10;
+
 }

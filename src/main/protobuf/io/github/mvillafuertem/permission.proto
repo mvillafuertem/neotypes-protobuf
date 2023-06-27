@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package io.github.mvillafuertem;
+
+message Permission {
+
+  optional string name = 10;
+
+}

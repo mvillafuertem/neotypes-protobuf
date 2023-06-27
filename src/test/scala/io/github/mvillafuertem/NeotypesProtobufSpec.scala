@@ -4,16 +4,17 @@ import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import cats.syntax.option._
 import io.github.mvillafuertem.NeotypesProtobufSpec.testResource
-import io.github.mvillafuertem.SimpleADT.{ NodeRelationshipNode, SingleNode }
+import io.github.mvillafuertem.SimpleADT.{ NodeRelationshipMiddleNodeRelationshipNode, NodeRelationshipNode, SingleNode }
 import io.github.mvillafuertem.admin.Admin
+import io.github.mvillafuertem.permission.Permission
 import io.github.mvillafuertem.relationship.Relationship
 import io.github.mvillafuertem.user.{ Info, User }
 import neotypes.GraphDatabase
 import neotypes.cats.effect.implicits._
 import neotypes.generic.implicits._
 import neotypes.mappers.ResultMapper
+import neotypes.model.types.Value
 import neotypes.model.types.Value.NullValue
-import neotypes.model.types.{ NeoList, NeoObject, Value }
 import neotypes.syntax.all._
 import org.apache.commons.io.FileUtils
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -29,30 +30,7 @@ import java.nio.file.Path
 
 final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with BeforeAndAfterAll {
 
-  implicit val unknownFieldSetMapper: ResultMapper[UnknownFieldSet] = ResultMapper.fromMatch { case NullValue =>
-    UnknownFieldSet.empty
-  }
-
-  private implicit val infoasdMapper: ResultMapper[Seq[Info]] = ResultMapper.fromMatch {
-    case Value.Str(value) =>
-      println(value)
-      println(value)
-      println(value)
-      println(value)
-      Seq(Info.of(value, value.some))
-  }
-
   "NeotypesProtobuf" should {
-
-    "WIP" in {
-
-      val query = """MATCH (user:User { name: "Manolo" }) RETURN user LIMIT 1"""
-
-      val actual: GeneratedMessage = NeotypesProtobufSpec.execute(query, ResultMapper.productDerive[User](deriveCaseClassProductMap))
-
-      actual shouldBe User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some)
-
-    }
 
     "return an `User` node" in {
 
@@ -60,7 +38,7 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
 
       val actual: GeneratedMessage = NeotypesProtobufSpec.execute(query, SimpleADT.generatedMessage)
 
-      actual shouldBe User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some)
+      actual shouldBe NeotypesProtobufSpec.expectedUser
 
     }
 
@@ -86,7 +64,7 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
       val actual: Seq[GeneratedMessage] = NeotypesProtobufSpec.execute(query, ResultMapper.list(SimpleADT.generatedMessage))
 
       actual shouldBe Seq(
-        User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some),
+        NeotypesProtobufSpec.expectedUser,
         Relationship.of(),
         Admin.of(admin = true.some)
       )
@@ -100,7 +78,7 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
       val actual: SimpleADT =
         NeotypesProtobufSpec.execute(query, SimpleADT.NodeRelationshipNode.nodeRelationshipNodeResultMapper.or(SimpleADT.SingleNode.singleNodeResultMapper))
 
-      actual shouldBe SingleNode(User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some))
+      actual shouldBe SingleNode(NeotypesProtobufSpec.expectedUser)
 
     }
 
@@ -117,10 +95,54 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
         NeotypesProtobufSpec.execute(query, SimpleADT.NodeRelationshipNode.nodeRelationshipNodeResultMapper.or(SimpleADT.SingleNode.singleNodeResultMapper))
 
       actual shouldBe NodeRelationshipNode(
-        User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some),
+        NeotypesProtobufSpec.expectedUser,
         Relationship.of(),
         Admin.of(admin = true.some)
       )
+
+    }
+
+    "return NodeRelationshipMiddleNodeRelationshipNode which is a coproduct of `SimpleADT`" in {
+
+      val query =
+        """
+          |MATCH (user:User)-[isAdmin:IsAdmin]-(admin:Admin)-[hasPermission:HasPermission]-(permission:Permission)
+          |RETURN [user, isAdmin, admin, hasPermission, permission]
+          |LIMIT 1
+          |""".stripMargin
+
+      val actual: SimpleADT =
+        NeotypesProtobufSpec.execute(
+          query,
+          SimpleADT.NodeRelationshipMiddleNodeRelationshipNode.nodeRelationshipMiddleNodeRelationshipNodeResultMapper
+            .or(SimpleADT.NodeRelationshipNode.nodeRelationshipNodeResultMapper)
+            .or(SimpleADT.SingleNode.singleNodeResultMapper)
+        )
+
+      actual shouldBe NodeRelationshipMiddleNodeRelationshipNode(
+        NeotypesProtobufSpec.expectedUser,
+        Relationship.of(),
+        Admin.of(admin = true.some),
+        Relationship.of(),
+        Permission("all".some)
+      )
+
+    }
+
+    "decode using productDerive" in {
+
+      implicit val infoMapper: ResultMapper[Seq[Info]] = ResultMapper.fromMatch {
+        case Value.NullValue  => Seq(Info.defaultInstance)
+        case Value.Str(value) => Seq(Info.of(value, value.some))
+      }
+
+      implicit val unknownFieldSetMapper: ResultMapper[UnknownFieldSet] = ResultMapper.fromMatch { case NullValue => UnknownFieldSet.empty }
+
+      val query = """MATCH (user:User { name: "Manolo" }) RETURN user LIMIT 1"""
+
+      val actual: GeneratedMessage = NeotypesProtobufSpec.execute(query, ResultMapper.productDerive[User](deriveCaseClassProductMap))
+
+      actual shouldBe NeotypesProtobufSpec.expectedUser
 
     }
 
@@ -133,7 +155,9 @@ final class NeotypesProtobufSpec extends AnyWordSpecLike with Matchers with Befo
     graphDatabaseService
       .executeTransactionally("""|CREATE(user:`User` {name: 'Manolo', surname: 'Del Bombo', username: 'monolo-bombo', info: 'more information'})
                                  |CREATE(admin:`Admin` {admin: true})
-                                 |CREATE(user)-[:IsAdmin]->(admin);
+                                 |CREATE(permission:`Permission` {name: "all"})
+                                 |CREATE(user)-[:IsAdmin]->(admin)
+                                 |CREATE(admin)-[:HasPermission]->(permission);
                                  |""".stripMargin)
     super.beforeAll()
   }
@@ -160,5 +184,8 @@ object NeotypesProtobufSpec {
     .use(query.query(mapper).single(_))
     .onError(IO.println)
     .unsafeRunSync()
+
+  val expectedUser =
+    User(name = "Manolo".some, surname = "Del Bombo".some, "monolo-bombo".some, Seq(Info("more information", "more information".some)))
 
 }
